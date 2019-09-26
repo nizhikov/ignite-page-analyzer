@@ -35,10 +35,10 @@ object MainApp extends App {
         cmd(PAGE_STAT).action( (_, c) => c.copy(command = Some(PAGE_STAT)) ).
             text("Gather statistics about Ignite PDS pages.").
             children(
-                opt[String]("dir").abbr("d").action( (v, c) ⇒
-                    c.copy(dir = Some(v)) ).text("Path to the PDS directory"),
-                opt[Unit]("verbose").abbr("v").action( (v, c) ⇒ c.copy(extLog = true)).
-                    text("Extended debug")
+                opt[String]("dir").abbr("d").action((v, c) ⇒ c.copy(dir = Some(v)))
+                    .text("Path to the Node PDS directory. Example \"/my/ignite/pds/node-000ffff0000/\""),
+                opt[Unit]("verbose").abbr("v").action((_, c) ⇒ c.copy(extLog = true)).
+                    text("Extended output")
             )
         help("help").text("prints this usage text")
         checkConfig { c =>
