@@ -25,7 +25,7 @@ import ru.nizhikov.ignite.pagestat.Config._
 /**
  */
 object MainApp extends App {
-    DOMConfigurator.configure(this.getClass.getResource("/ext/log4j.xml"))
+    DOMConfigurator.configure(this.getClass.getResource("/log4j.xml"))
 
     val DEFAULT_POOL_SIZE = 2
 
@@ -35,8 +35,10 @@ object MainApp extends App {
         cmd(PAGE_STAT).action( (_, c) => c.copy(command = Some(PAGE_STAT)) ).
             text("Gather statistics about Ignite PDS pages.").
             children(
-                opt[String]("dir").abbr("d").action( (v, c) =>
-                    c.copy(dir = Some(v)) ).text("Path to the PDS directory")
+                opt[String]("dir").abbr("d").action( (v, c) ⇒
+                    c.copy(dir = Some(v)) ).text("Path to the PDS directory"),
+                opt[Unit]("verbose").abbr("v").action( (v, c) ⇒ c.copy(extLog = true)).
+                    text("Extended debug")
             )
         help("help").text("prints this usage text")
         checkConfig { c =>
@@ -54,7 +56,7 @@ object MainApp extends App {
 
     parser.parse(args, Config()) match {
         case Some(config) => config.command match {
-            case Some(PAGE_STAT) ⇒ PageStatistic().collect(config.dir.get)
+            case Some(PAGE_STAT) ⇒ PageStatistic(config.extLog).collect(config.dir.get)
         }
 
         case _ =>

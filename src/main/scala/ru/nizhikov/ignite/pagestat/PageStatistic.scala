@@ -14,7 +14,7 @@ import scala.collection.mutable
 
 /**
  */
-class PageStatistic(pageSz: Int) {
+class PageStatistic(extLog: Boolean, pageSz: Int) {
     /** */
     val log = Logger.getLogger(this.getClass)
 
@@ -24,18 +24,6 @@ class PageStatistic(pageSz: Int) {
 
         new File(dir)
             .listFiles
-            .filter(_.isDirectory)
-            .foreach(collectNodeInfo)
-    }
-
-    /** */
-    def collectNodeInfo(dir: File): Unit = {
-        if (!dir.getName.startsWith("node"))
-            return
-
-        log.info(s"Found node directory $dir")
-
-        dir.listFiles
             .filter(_.isDirectory)
             .filter(d ⇒ d.getName.startsWith(CACHE_DIR_PREFIX) || d.getName.startsWith(CACHE_GRP_DIR_PREFIX))
             .foreach(collectCacheInfo)
@@ -90,7 +78,8 @@ class PageStatistic(pageSz: Int) {
      * @return Tuple of 3 Long. (File size, page used space, page unused space). All numbers in bytes.
      */
     def analyzePageFile(cache: String, part: File): Map[Int, Array[Long]] = {
-        log.info(s"Partition file. [name=${part.getName},size=${size(part.length())},cache=$cache]")
+        if (extLog)
+            log.info(s"Partition file. [name=${part.getName},size=${size(part.length())},cache=$cache]")
 
         closeAfter(FileChannel.open(part.toPath, StandardOpenOption.READ)) { ch ⇒
             val page = ByteBuffer.allocate(pageSz).order(ByteOrder.nativeOrder())
@@ -181,5 +170,5 @@ class PageStatistic(pageSz: Int) {
 }
 
 object PageStatistic {
-    def apply(pageSz: Int = DFLT_PAGE_SIZE): PageStatistic = new PageStatistic(pageSz)
+    def apply(extLog: Boolean, pageSz: Int = DFLT_PAGE_SIZE): PageStatistic = new PageStatistic(extLog, pageSz)
 }
