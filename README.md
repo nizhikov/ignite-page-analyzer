@@ -6,7 +6,7 @@ Will create zip archive with binary files required to run application.
 
 * RUN
 
-`$ java -jar ignite-page-analyzer-0.0.1-SNAPSHOT.jar page-statistics -d /path/to/pds`
+`$ java -jar ignite-page-analyzer-0.0.1-SNAPSHOT.jar page-statistics -d /path/to/pds/node00-81ed9fdb-b5d7-4c7a-98fa-1987712f1366`
 
 Expected `/path/top/pds` content
 ```
