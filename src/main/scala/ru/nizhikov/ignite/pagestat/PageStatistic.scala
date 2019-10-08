@@ -25,7 +25,7 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
         new File(dir)
             .listFiles
             .filter(_.isDirectory)
-            .filter(d ⇒ d.getName.startsWith(CACHE_DIR_PREFIX) || d.getName.startsWith(CACHE_GRP_DIR_PREFIX))
+            .filterNot(d ⇒ d.getName == META_STORAGE_NAME || d.getName == "cp")
             .foreach(collectCacheInfo)
     }
 
