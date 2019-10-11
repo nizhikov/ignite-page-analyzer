@@ -38,7 +38,9 @@ object MainApp extends App {
                 opt[String]("dir").abbr("d").action((v, c) ⇒ c.copy(dir = Some(v)))
                     .text("Path to the Node PDS directory. Example \"/my/ignite/pds/node-000ffff0000/\""),
                 opt[Unit]("verbose").abbr("v").action((_, c) ⇒ c.copy(extLog = true)).
-                    text("Extended output")
+                    text("Extended output"),
+                opt[Unit]("index").abbr("i").action((_, c) ⇒ c.copy(checkIndexes = true)).
+                    text("Check index.bin files instead of part*.bin")
             )
         help("help").text("prints this usage text")
         checkConfig { c =>
@@ -56,7 +58,7 @@ object MainApp extends App {
 
     parser.parse(args, Config()) match {
         case Some(config) => config.command match {
-            case Some(PAGE_STAT) ⇒ PageStatistic(config.extLog).collect(config.dir.get)
+            case Some(PAGE_STAT) ⇒ PageStatistic(config.extLog, config.checkIndexes).collect(config.dir.get)
         }
 
         case _ =>
