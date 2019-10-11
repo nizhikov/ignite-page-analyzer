@@ -14,7 +14,7 @@ import scala.collection.mutable
 
 /**
  */
-class PageStatistic(extLog: Boolean, pageSz: Int) {
+class PageStatistic(extLog: Boolean, checkIndexes: Boolean, pageSz: Int) {
     /** */
     val log = Logger.getLogger(this.getClass)
 
@@ -39,7 +39,9 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
         val fullStat = mutable.Map[Int, Array[Long]]()
 
         dir.listFiles()
-            .filter(f ⇒ f.isFile && f.getName.startsWith(PART_FILE_PREFIX))
+            .filter(f ⇒ f.isFile &&
+                ((checkIndexes && f.getName.startsWith(INDEX_FILE_NAME)) ||
+                (!checkIndexes && f.getName.startsWith(PART_FILE_PREFIX))))
             .flatMap(analyzePageFile(cacheName, _))
             .foreach(e ⇒ {
                 if (!fullStat.contains(e._1))
@@ -170,5 +172,5 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
 }
 
 object PageStatistic {
-    def apply(extLog: Boolean, pageSz: Int = DFLT_PAGE_SIZE): PageStatistic = new PageStatistic(extLog, pageSz)
+    def apply(extLog: Boolean, checkIndexes: Boolean, pageSz: Int = DFLT_PAGE_SIZE): PageStatistic = new PageStatistic(extLog, checkIndexes, pageSz)
 }
