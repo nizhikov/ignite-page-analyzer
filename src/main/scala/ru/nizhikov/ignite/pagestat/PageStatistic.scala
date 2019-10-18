@@ -139,12 +139,12 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
                     stat(pageType)(1) += page.treePageFreeSpace(itemSz)
                 } else if (pageType >= PageIO.T_H2_EX_REF_LEAF_START && pageType <= PageIO.T_H2_EX_REF_LEAF_END) {
                     // See H2ExtrasLeafIO constructor
-                    val itemSz = (pageType - PageIO.T_H2_EX_REF_LEAF_START) + 8
+                    val itemSz = (pageType - PageIO.T_H2_EX_REF_LEAF_START + 1) + 8
 
                     stat(pageType)(1) += page.treePageFreeSpace(itemSz)
                 } else if (pageType >= PageIO.T_H2_EX_REF_INNER_START && pageType <= PageIO.T_H2_EX_REF_INNER_END) {
                     // See H2ExtrasInnerIO constructor
-                    val itemSz = (pageType - PageIO.T_H2_EX_REF_INNER_START) + 8
+                    val itemSz = (pageType - PageIO.T_H2_EX_REF_INNER_START + 1) + 8
 
                     stat(pageType)(1) += page.treePageFreeSpace(itemSz)
                 }

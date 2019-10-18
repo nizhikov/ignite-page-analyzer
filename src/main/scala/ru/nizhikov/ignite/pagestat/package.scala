@@ -70,10 +70,13 @@ package object pagestat {
 
         def pageType: Int = PageIO.getType(bb)
 
-        def treePageFreeSpace(itemSz: Int) = {
+        def treePageFreeSpace(itemSz: Int): Int = {
             // See BPlusIO#ITEMS_OFF
             val ITEMS_OFF = COMMON_HEADER_END + 2 + 8 + 8
-            val maxCnt = (bb.capacity() - ITEMS_OFF)/itemSz
+            val pageSz = bb.capacity()
+
+            // See BPlusIO#getMaxCount
+            val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
 
             val cnt = bb.takeShort(COMMON_HEADER_END)
 
