@@ -162,7 +162,7 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
                     val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
                     val cnt = page.takeShort(COMMON_HEADER_END)
 
-                    stat(pageType)(1) += (maxCnt - cnt)*itemSz
+                    stat(pageType)(1) += (maxCnt - cnt)*(itemSz + 8)
                 }
 
                 readed = ch.read(page)
