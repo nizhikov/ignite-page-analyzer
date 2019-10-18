@@ -5,8 +5,7 @@ package ru.nizhikov.ignite.pagestat
 case class Config(
     command: Option[String] = None,
     dir: Option[String] = None,
-    extLog: Boolean = false,
-    checkIndexes: Boolean = false
+    extLog: Boolean = false
 )
 
 object Config {
