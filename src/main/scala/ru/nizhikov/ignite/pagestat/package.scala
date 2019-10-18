@@ -4,7 +4,6 @@ import java.io.File
 import java.nio.ByteBuffer
 
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.COMMON_HEADER_END
 import org.apache.log4j.Logger
 
 /**
@@ -69,18 +68,5 @@ package object pagestat {
         def takeShort(offset: Int): Int = bb.getShort(offset) & 0xFFFF
 
         def pageType: Int = PageIO.getType(bb)
-
-        def treePageFreeSpace(itemSz: Int): Int = {
-            // See BPlusIO#ITEMS_OFF
-            val ITEMS_OFF = COMMON_HEADER_END + 2 + 8 + 8
-            val pageSz = bb.capacity()
-
-            // See BPlusIO#getMaxCount
-            val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
-
-            val cnt = bb.takeShort(COMMON_HEADER_END)
-
-            (maxCnt - cnt)*itemSz
-        }
     }
 }

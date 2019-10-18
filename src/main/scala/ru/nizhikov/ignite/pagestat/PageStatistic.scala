@@ -19,6 +19,9 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
     /** */
     val log = Logger.getLogger(this.getClass)
 
+    // See BPlusIO#ITEMS_OFF
+    val ITEMS_OFF: Int = COMMON_HEADER_END + 2 + 8 + 8
+
     /** */
     def collect(dir: String): Unit = {
         log.info(s"Starting analyze $dir")
@@ -136,17 +139,30 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
                 else if (pageType == T_CACHE_ID_AWARE_DATA_REF_LEAF) {
                     val itemSz = 16
 
-                    stat(pageType)(1) += page.treePageFreeSpace(itemSz)
+                    // See BPlusIO#getMaxCount
+                    val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
+
+                    val cnt = page.takeShort(COMMON_HEADER_END)
+
+                    stat(pageType)(1) += (maxCnt - cnt)*itemSz
                 } else if (pageType >= PageIO.T_H2_EX_REF_LEAF_START && pageType <= PageIO.T_H2_EX_REF_LEAF_END) {
                     // See H2ExtrasLeafIO constructor
                     val itemSz = (pageType - PageIO.T_H2_EX_REF_LEAF_START + 1) + 8
 
-                    stat(pageType)(1) += page.treePageFreeSpace(itemSz)
+                    // See BPlusIO#getMaxCount
+                    val maxCnt = (pageSz - ITEMS_OFF)/itemSz
+                    val cnt = page.takeShort(COMMON_HEADER_END)
+
+                    stat(pageType)(1) += (maxCnt - cnt)*itemSz
                 } else if (pageType >= PageIO.T_H2_EX_REF_INNER_START && pageType <= PageIO.T_H2_EX_REF_INNER_END) {
                     // See H2ExtrasInnerIO constructor
                     val itemSz = (pageType - PageIO.T_H2_EX_REF_INNER_START + 1) + 8
 
-                    stat(pageType)(1) += page.treePageFreeSpace(itemSz)
+                    // See BPlusIO#getMaxCount
+                    val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
+                    val cnt = page.takeShort(COMMON_HEADER_END)
+
+                    stat(pageType)(1) += (maxCnt - cnt)*itemSz
                 }
 
                 readed = ch.read(page)
