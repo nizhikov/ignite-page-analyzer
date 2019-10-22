@@ -27,7 +27,7 @@
 
     <properties>
         <scala.version>2.11.12</scala.version>
-        <ignite.version>2.5.8-p4</ignite.version>
+        <ignite.version>2.7.6</ignite.version>
         <assembly.file.name>${project.artifactId}-bin-${project.version}</assembly.file.name>
     </properties>
 
