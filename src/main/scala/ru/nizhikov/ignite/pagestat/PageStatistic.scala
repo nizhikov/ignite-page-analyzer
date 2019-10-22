@@ -7,8 +7,6 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager._
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.{COMMON_HEADER_END, T_CACHE_ID_AWARE_DATA_REF_LEAF, T_DATA, T_PAGE_LIST_NODE}
 import org.apache.log4j.Logger
 
 import scala.collection.mutable
@@ -18,9 +16,6 @@ import scala.collection.mutable
 class PageStatistic(extLog: Boolean, pageSz: Int) {
     /** */
     val log = Logger.getLogger(this.getClass)
-
-    // See BPlusIO#ITEMS_OFF
-    val ITEMS_OFF: Int = COMMON_HEADER_END + 2 + 8 + 8
 
     /** */
     def collect(dir: String): Unit = {
@@ -119,51 +114,9 @@ class PageStatistic(extLog: Boolean, pageSz: Int) {
                     stat += pageType → new Array[Long](2)
 
                 stat(pageType)(0) += 1
-
-                if (pageType == T_DATA) {
-                    // See AbstractDataPageIO#FREE_SPACE_OFF
-                    stat(pageType)(1) += page.takeShort(COMMON_HEADER_END + 8)
-                }
-                else if (pageType == T_PAGE_LIST_NODE) {
-                    // See PagesListNodeIO#CNT_OFF
-                    val CNT_OFF = COMMON_HEADER_END + 8 + 8
-                    val PAGE_IDS_OFF = CNT_OFF + 2
-
-                    val cnt = page.takeShort(CNT_OFF)
-
-                    // See PagesListNodeIO#PAGE_IDS_OFF
-                    val capacity = (pageSz - PAGE_IDS_OFF) >>> 3
-
-                    stat(pageType)(1) += (capacity - cnt)*8
-                }
-                else if (pageType == T_CACHE_ID_AWARE_DATA_REF_LEAF) {
-                    val itemSz = 16
-
-                    // See BPlusIO#getMaxCount
-                    val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
-
-                    val cnt = page.takeShort(COMMON_HEADER_END)
-
-                    stat(pageType)(1) += (maxCnt - cnt)*itemSz
-                } else if (pageType >= PageIO.T_H2_EX_REF_LEAF_START && pageType <= PageIO.T_H2_EX_REF_LEAF_END) {
-                    // See H2ExtrasLeafIO constructor
-                    val itemSz = (pageType - PageIO.T_H2_EX_REF_LEAF_START + 1) + 8
-
-                    // See BPlusIO#getMaxCount
-                    val maxCnt = (pageSz - ITEMS_OFF)/itemSz
-                    val cnt = page.takeShort(COMMON_HEADER_END)
-
-                    stat(pageType)(1) += (maxCnt - cnt)*itemSz
-                } else if (pageType >= PageIO.T_H2_EX_REF_INNER_START && pageType <= PageIO.T_H2_EX_REF_INNER_END) {
-                    // See H2ExtrasInnerIO constructor
-                    val itemSz = (pageType - PageIO.T_H2_EX_REF_INNER_START + 1) + 8
-
-                    // See BPlusIO#getMaxCount
-                    val maxCnt = (pageSz - ITEMS_OFF - 8)/(itemSz + 8)
-                    val cnt = page.takeShort(COMMON_HEADER_END)
-
-                    stat(pageType)(1) += (maxCnt - cnt)*(itemSz + 8)
-                }
+                stat(pageType)(1) += page
+                    .pageFreeSpace(pageType)
+                    .getOrElse(0)
 
                 readed = ch.read(page)
             }
