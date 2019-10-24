@@ -6,12 +6,10 @@ import java.nio.ByteBuffer
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.{COMMON_HEADER_END, T_CACHE_ID_AWARE_DATA_REF_LEAF, T_DATA,
     T_H2_EX_REF_INNER_END, T_H2_EX_REF_INNER_START, T_H2_EX_REF_LEAF_END, T_H2_EX_REF_LEAF_START, T_PAGE_LIST_NODE}
-import org.apache.log4j.Logger
 
 /**
  */
 package object pagestat {
-    private val logger = Logger.getLogger(this.getClass)
 
     def filesList(dir: String): Seq[File] = {
         val d = new File(dir)
