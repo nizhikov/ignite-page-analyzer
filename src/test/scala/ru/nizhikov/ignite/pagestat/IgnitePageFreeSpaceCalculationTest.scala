@@ -27,7 +27,7 @@ class IgnitePageFreeSpaceCalculationTest extends FlatSpec with BeforeAndAfterEac
     private val H2_EXTRAS_INNER_TEST_COUNT: Int = 30
 
     // Fake buffer, acts as mock page buffer
-    var fakePageBuffer: ByteBuffer = ByteBuffer.allocate(TEST_PAGE_SIZE)
+    val fakePageBuffer: ByteBuffer = ByteBuffer.allocate(TEST_PAGE_SIZE)
         .order(ByteOrder.nativeOrder())
 
     override def beforeEach(): Unit = {
