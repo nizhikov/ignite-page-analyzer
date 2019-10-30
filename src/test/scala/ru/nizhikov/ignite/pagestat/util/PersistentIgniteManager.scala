@@ -29,12 +29,13 @@ case class PersistentIgniteManager(igniteEx: IgniteEx, pageMemoryEx: PageMemoryE
 
         ios += fullId -> io
 
-        acquireAndReleasePage(
-            fullId,
-            pageAddr => io.initNewPage(
-                pageAddr,
-                fullId.pageId(),
-                pageMemoryEx.pageSize()))
+        acquireAndReleasePageForAction(fullId) {
+            pageAddr =>
+                io.initNewPage(
+                    pageAddr,
+                    fullId.pageId(),
+                    pageMemoryEx.pageSize())
+        }
 
         fullId
     }
@@ -46,8 +47,8 @@ case class PersistentIgniteManager(igniteEx: IgniteEx, pageMemoryEx: PageMemoryE
         } yield
             rows.foreach {
                 row =>
-                    writePageWithCpLock(fullId) {
-                        pageAddr =>
+                    acquireAndReleasePageForAction(fullId) {
+                        pageAddr: Long =>
                             dataPageIo.addRow(
                                 pageAddr,
                                 row,
@@ -57,20 +58,17 @@ case class PersistentIgniteManager(igniteEx: IgniteEx, pageMemoryEx: PageMemoryE
 
     def dataPageFreeSpace(fullId: FullPageId): Option[Int] =
         for {
-            o <- ios.get(fullId)
-                dataPageIo = o.asInstanceOf[DataPageIO]
+            io <- ios.get(fullId)
+                dataPageIo = io.asInstanceOf[DataPageIO]
         } yield
-            acquireAndReleasePage(
-                fullId,
-                // Get free space
-                pageAddr => dataPageIo.getFreeSpace(pageAddr))
+            acquireAndReleasePageForAction(fullId) {
+                pageAddr => dataPageIo.getFreeSpace(pageAddr)
+            }
 
     def getPageBuffer(fullId: FullPageId): Option[ByteBuffer] =
         for {
             io <- ios.get(fullId)
-                pageBuffer = acquireAndReleasePage(fullId,
-                    pageMemoryEx.pageBuffer
-                )
+                pageBuffer = acquireAndReleasePageForAction(fullId)(pageMemoryEx.pageBuffer)
         } yield
             pageBuffer
 
@@ -81,55 +79,23 @@ case class PersistentIgniteManager(igniteEx: IgniteEx, pageMemoryEx: PageMemoryE
         igniteEx.close()
     }
 
-    private def acquireAndReleasePage[R](fullId: FullPageId, action: Long => R): R =
-        try {
-            val page = pageMemoryEx.acquirePage(fullId.groupId(), fullId.pageId())
-
-            try {
-                val pageAddr = pageMemoryEx.writeLock(
-                    fullId.groupId(),
-                    fullId.pageId(),
-                    page)
-
-                try {
-                    action(pageAddr)
-                }
-                finally
-                    pageMemoryEx.writeUnlock(
-                        fullId.groupId(),
-                        fullId.pageId(),
-                        page,
-                        null,
-                        true)
-            }
-            finally {
-                pageMemoryEx.releasePage(
-                    fullId.groupId(),
-                    fullId.pageId(),
-                    page)
-            }
-        }
-
-    private def writePageWithCpLock[R](fullId: FullPageId)(action: Long => R): R = {
-        val dbMngr = igniteEx
-            .context()
-            .cache()
-            .context()
-            .database()
-
-        dbMngr.checkpointReadLock()
+    private def acquireAndReleasePageForAction[R](fullId: FullPageId)(action: Long => R): R = {
+        val page = pageMemoryEx.acquirePage(fullId.groupId(), fullId.pageId())
         try
-            acquireAndReleasePage(fullId, action)
+            action(page)
         finally
-            dbMngr.checkpointReadUnlock()
+            pageMemoryEx.releasePage(
+                fullId.groupId(),
+                fullId.pageId(),
+                page)
     }
 }
 
 object PersistentIgniteManager {
     def apply(pageSz: Int = DFLT_PAGE_SIZE): PersistentIgniteManager = {
         val storageCfg = new DataStorageConfiguration().setPageSize(pageSz)
-        storageCfg
-            .getDefaultDataRegionConfiguration.setPersistenceEnabled(true)
+        storageCfg.getDefaultDataRegionConfiguration
+            .setPersistenceEnabled(true)
         val cfg = new IgniteConfiguration().setDataStorageConfiguration(storageCfg)
 
         val igniteEx = Ignition.start(cfg)
