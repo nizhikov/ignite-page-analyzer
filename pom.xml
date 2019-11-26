@@ -23,7 +23,7 @@
 
     <artifactId>ignite-page-analyzer</artifactId>
     <groupId>ignite-page-analyzer</groupId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <properties>
         <scala.version>2.11.12</scala.version>
