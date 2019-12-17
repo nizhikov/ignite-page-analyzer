@@ -3,9 +3,12 @@ package ru.nizhikov.ignite
 import java.io.File
 import java.nio.ByteBuffer
 
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.{COMMON_HEADER_END, T_CACHE_ID_AWARE_DATA_REF_LEAF, T_DATA,
-    T_H2_EX_REF_INNER_END, T_H2_EX_REF_INNER_START, T_H2_EX_REF_LEAF_END, T_H2_EX_REF_LEAF_START, T_PAGE_LIST_NODE}
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.{BPlusIO, BPlusInnerIO, BPlusLeafIO, PageIO}
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.{COMMON_HEADER_END,
+    T_CACHE_ID_AWARE_DATA_REF_LEAF, T_DATA, T_H2_EX_REF_INNER_END, T_H2_EX_REF_INNER_START, T_H2_EX_REF_LEAF_END,
+    T_H2_EX_REF_LEAF_START, T_PAGE_LIST_NODE}
+import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataLeafIO
+import org.apache.ignite.internal.processors.query.h2.database.io.{H2ExtrasInnerIO, H2ExtrasLeafIO}
 
 /**
  */
@@ -80,20 +83,20 @@ package object pagestat {
          * ====Items sizes====
          * Item sizes could be obtained according to respective constructors:
          *
-         *  - for [[org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataLeafIO]] - 16 bytes.
-         *  - for extras pages [[org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO]] and
-         * [[org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO]] - 8 bytes + payloadSize.
+         *  - for [[CacheIdAwareDataLeafIO]] - 16 bytes.
+         *  - for extras pages [[H2ExtrasLeafIO]] and
+         * [[H2ExtrasInnerIO]] - 8 bytes + payloadSize.
          *
          * Payload size could be obtained in corresponding #register methods, in ''Apache Ignite 2.5.8-p4'' they would be as following:
          *
-         *  - [[org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO]]#register
+         *  - [[H2ExtrasLeafIO]]#register
          * {{{
          *      public static void register() {
          *          for (short payload = 1; payload <= PageIO.MAX_PAYLOAD_SIZE; payload++)
          *              PageIO.registerH2ExtraLeaf(getVersions((short)(PageIO.T_H2_EX_REF_LEAF_START + payload - 1), payload));
          *      }
          * }}}
-         *  - for [[org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO]]#register:
+         *  - for [[H2ExtrasInnerIO]]#register:
          * {{{
          *      public static void register() {
          *          for (short payload = 1; payload <= PageIO.MAX_PAYLOAD_SIZE; payload++)
@@ -101,11 +104,11 @@ package object pagestat {
          *      }
          * }}}
          *
-         * So, item size is equal to `pType - T_H2_EX_REF_LEAF_START + 9` for ''H2ExtrasLeafIO'' and `pType - T_H2_EX_REF_INNER_START + 9`
-         * for ''H2ExtrasInnerIO''.
+         * So, item size is equal to `pType - T_H2_EX_REF_LEAF_START + 9` for ''H2ExtrasLeafIO'' and
+         * `pType - T_H2_EX_REF_INNER_START + 9` for ''H2ExtrasInnerIO''.
          *
          * ====Count====
-         * Count for all B+ pages is calculated as one in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO]]#getCount
+         * Count for all B+ pages is calculated as one in [[BPlusIO]]#getCount
          * method:
          * {{{
          *      public final int getCount(long pageAddr) {
@@ -120,13 +123,13 @@ package object pagestat {
          * ====Max count====
          * Max count is determined as in #getMaxCount method of corresponding ancestor:
          *
-         *  - for ''CacheIdAwareDataLeafIO'' and ''H2ExtrasLeafIO'' as in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO]]#getMaxCount
-         *  - for ''H2ExtrasInnerIO'' as in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO]]#getMaxCount
+         *  - for ''CacheIdAwareDataLeafIO'' and ''H2ExtrasLeafIO'' as in [[BPlusLeafIO]]#getMaxCount
+         *  - for ''H2ExtrasInnerIO'' as in [[BPlusInnerIO]]#getMaxCount
          *
          * ====Free space====
-         * Free space calculation leans to corresponding store and remove methods, which depend on item offset calculation,
-         * so it would be different for [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO]]
-         * and [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO]] ancestors.
+         * Free space calculation leans to corresponding store and remove methods, which depend on item offset
+         * calculation, so it would be different for [[BPlusLeafIO]]
+         * and [[BPlusInnerIO]] ancestors.
          *
          * @param pType page type
          * @return free space optional
@@ -165,7 +168,7 @@ package object pagestat {
 
         /**
          * Method for B+ leaf pages max count calculation.
-         * Max count of items in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO]]#getMaxCount is determined as:
+         * Max count of items in [[BPlusLeafIO]]#getMaxCount is determined as:
          * {{{
          *      @Override public int getMaxCount(long pageAddr, int pageSize) {
          *          return (pageSize - ITEMS_OFF) / getItemSize();
@@ -179,7 +182,7 @@ package object pagestat {
 
         /**
          * Method for B+ inner pages max count calculation.
-         * Max count of items in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO]]#getMaxCount is determined as:
+         * Max count of items in [[BPlusInnerIO]]#getMaxCount is determined as:
          * {{{
          *      @Override public int getMaxCount(long pageAddr, int pageSize) {
          *          // The structure of the page is the following:
@@ -196,29 +199,31 @@ package object pagestat {
 
         /**
          * Method for B+ leaf pages free space calculation.
-         * Offset in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO]]#offset is determined as:
+         * Offset in [[BPlusLeafIO]]#offset is determined as:
          * {{{
-                @Override public final int offset(int idx) {
-                    assert idx >= 0: idx;
-
-                    return ITEMS_OFF + idx * getItemSize();
-                }
+         * @Override public final int offset(int idx) {
+         * assert idx >= 0: idx;
+         **
+         *return ITEMS_OFF + idx * getItemSize();
+         *}
          * }}}
          *
-         * Methods for storing and removing items use this offset, so total free space for page could be determined as multiplication
-         * of unused count of items to item size
+         * Methods for storing and removing items use this offset, so total free space for page could be determined as
+         * multiplication of unused count of items to item size
          *
          * @param itemSz size of item
          * @param cnt current count of items, should not be changed by default
          * @param maxCntFun function to calculate max size, should not be changed by default
          * @return free space in bytes for page
          */
-        def bPlusLeafFreeSpace(itemSz: Int, cnt: Int = takeShort(COMMON_HEADER_END), maxCntFun: Int => Int = bPlusLeafMaxCnt): Int =
-            (maxCntFun(itemSz) - cnt) * itemSz
+        def bPlusLeafFreeSpace(
+            itemSz: Int,
+            cnt: Int = takeShort(COMMON_HEADER_END),
+            maxCntFun: Int => Int = bPlusLeafMaxCnt): Int = (maxCntFun(itemSz) - cnt) * itemSz
 
         /**
          * Method for B+ inner pages free space calculation.
-         * Offset in [[org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO]]#offset is determined as:
+         * Offset in [[BPlusInnerIO]]#offset is determined as:
          * {{{
          *       private int offset0(int idx, int shift) {
          *           return shift + (8 + getItemSize()) * idx;
@@ -238,7 +243,9 @@ package object pagestat {
          * @param maxCntFun function to calculate max size, should not be changed by default
          * @return free space in bytes for page
          */
-        def bPlusInnerFreeSpace(itemSz: Int, cnt: Int = takeShort(COMMON_HEADER_END), maxCntFun: Int => Int = bPlusInnerMaxCnt): Int =
-            (maxCntFun(itemSz) - cnt) * (itemSz + 8)
+        def bPlusInnerFreeSpace(
+            itemSz: Int,
+            cnt: Int = takeShort(COMMON_HEADER_END),
+            maxCntFun: Int => Int = bPlusInnerMaxCnt): Int = (maxCntFun(itemSz) - cnt) * (itemSz + 8)
     }
 }
