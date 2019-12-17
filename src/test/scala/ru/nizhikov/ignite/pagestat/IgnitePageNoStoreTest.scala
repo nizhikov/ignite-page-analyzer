@@ -132,27 +132,6 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
     }
 
     /**
-     * Allocate and acquire page, init it with [[DataPageIO]] and add row with a given payload.
-     *
-     * @param payload If present, byte array array of payload, otherwise zero length array.
-     * @return [[FullPageId]] of created page
-     */
-    private def createAndFillDataPage(payload: Array[Byte] = Array()): FullPageId = {
-        val grpId = -1
-        val fullId = new FullPageId(pageMemory.allocatePage(grpId, 1, PageIdAllocator.FLAG_DATA), grpId)
-
-        acquireAndReleasePageForAction(fullId) {
-            pageAddr => {
-                dataPageIo.initNewPage(pageAddr, fullId.pageId(), pageMemory.pageSize())
-                if (payload.length > 0)
-                    dataPageIo.addRow(pageAddr, payload, pageMemory.pageSize())
-            }
-        }
-
-        fullId
-    }
-
-    /**
      * Utility method for wrapping given action into page acquire-release sequence.
      *
      * @param fullId [[FullPageId]] of affected page.
@@ -179,5 +158,26 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
      */
     def dataPageFreeSpaceFromIo(fullId: FullPageId): Int = acquireAndReleasePageForAction(fullId) {
         pageAddr => dataPageIo.getFreeSpace(pageAddr)
+    }
+
+    /**
+     * Allocate and acquire page, init it with [[DataPageIO]] and add row with a given payload.
+     *
+     * @param payload If present, byte array array of payload, otherwise zero length array.
+     * @return [[FullPageId]] of created page
+     */
+    private def createAndFillDataPage(payload: Array[Byte] = Array()): FullPageId = {
+        val grpId = -1
+        val fullId = new FullPageId(pageMemory.allocatePage(grpId, 1, PageIdAllocator.FLAG_DATA), grpId)
+
+        acquireAndReleasePageForAction(fullId) {
+            pageAddr => {
+                dataPageIo.initNewPage(pageAddr, fullId.pageId(), pageMemory.pageSize())
+                if (payload.length > 0)
+                    dataPageIo.addRow(pageAddr, payload, pageMemory.pageSize())
+            }
+        }
+
+        fullId
     }
 }
