@@ -144,10 +144,7 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
         try
             action(page)
         finally
-            pageMemory.releasePage(
-                fullId.groupId(),
-                fullId.pageId(),
-                page)
+            pageMemory.releasePage(fullId.groupId(), fullId.pageId(), page)
     }
 
     /**
