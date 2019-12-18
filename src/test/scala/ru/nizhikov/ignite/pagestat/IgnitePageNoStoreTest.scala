@@ -18,10 +18,6 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, GivenWhenThen}
  * Utilizes [[PageMemoryNoStoreImpl]] to acquire and allocate pages.
  */
 class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenWhenThen {
-    /** Taking into account free space calculation in [[AbstractDataPageIO]]#freeSpace reserved size for page
-     * costists of ITEM_SIZE(2) + PAYLOAD_LEN_SIZE(8) + LINK_SIZE(2) */
-    private val FREE_RESERVED_SIZE = 2 + 8 + 2
-
     /** Data page IO, used to work with data pages */
     val dataPageIo = DataPageIO.VERSIONS.forVersion(1)
 
@@ -101,13 +97,15 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
     /**
      * Calculate free space by means of [[IgnitePage()]] taking into account calculation of free space in
      * [[AbstractDataPageIO]]#getFreeSpace, where value, obtained from page header if decremented to reserved size of
-     * bytes
+     * bytes (costists of ITEM_SIZE(2) + PAYLOAD_LEN_SIZE(8) + LINK_SIZE(2))
      *
      * @param id [[FullPageId]] of desired page
      * @return free space in page
      */
     private def dataPageFreeSpaceFromBuffer(id: FullPageId) = {
         val buffer = acquireAndReleasePageForAction(id)(pageMemory.pageBuffer)
+
+        val FREE_RESERVED_SIZE = 12
         val actualFree = buffer.pageFreeSpace(T_DATA).get - FREE_RESERVED_SIZE
 
         if (actualFree < 0)
