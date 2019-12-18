@@ -22,20 +22,14 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
      * costists of ITEM_SIZE(2) + PAYLOAD_LEN_SIZE(8) + LINK_SIZE(2) */
     private val FREE_RESERVED_SIZE = 2 + 8 + 2
 
-    /**
-     * Data page IO, used to work with data pages
-     */
+    /** Data page IO, used to work with data pages */
     val dataPageIo = DataPageIO.VERSIONS.forVersion(1)
 
-    /**
-     * Logger, used by page memory
-     */
+    /** Logger, used by page memory */
     var log = new NullLogger()
     //    var log = new Log4JLogger(Logger.getLogger(this.getClass))
 
-    /**
-     * Page memory for operating with data pages
-     */
+    /** Page memory for operating with data pages */
     var pageMemory: PageMemory = _
 
     override def beforeEach(): Unit = {
