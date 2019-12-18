@@ -18,11 +18,8 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, GivenWhenThen}
  * Utilizes [[PageMemoryNoStoreImpl]] to acquire and allocate pages.
  */
 class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenWhenThen {
-    /** Items offset for B+-tree pages */
-    private val BPLUS_ITEMS_OFF: Int = COMMON_HEADER_END + 2 + 8 + 8
-
-    /** Taking into account free space calculation in [[AbstractDataPageIO]]#freeSpace reserved size for page costists of
-     * ITEM_SIZE(2) + PAYLOAD_LEN_SIZE(8) + LINK_SIZE(2) */
+    /** Taking into account free space calculation in [[AbstractDataPageIO]]#freeSpace reserved size for page
+     * costists of ITEM_SIZE(2) + PAYLOAD_LEN_SIZE(8) + LINK_SIZE(2) */
     private val FREE_RESERVED_SIZE = 2 + 8 + 2
 
     /**
@@ -67,8 +64,7 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
         When("obtaining free space of empty data page by means of PageAnalyzer and by means of DataPageIO")
         val expectedFree = dataPageFreeSpaceFromIo(id)
 
-        val buffer = acquireAndReleasePageForAction(id)(pageMemory.pageBuffer)
-        val actualFree = buffer.pageFreeSpace(T_DATA).get - FREE_RESERVED_SIZE
+        val actualFree = dataPageFreeSpaceFromBuffer(id)
 
         Then(s"free space should be less than full page size ($DFLT_PAGE_SIZE bytes) to overhead amount (" +
             s"${MIN_DATA_PAGE_OVERHEAD} bytes)")
@@ -80,14 +76,12 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
 
     it should "should be zero when page is full" in {
         Given("initialized new data page")
-        // TODO Check for 4 bytes
-        val id = createAndFillDataPage(new Array[Byte](DFLT_PAGE_SIZE - MIN_DATA_PAGE_OVERHEAD - 4))
+        val id = createAndFillDataPage(new Array[Byte](DFLT_PAGE_SIZE - MIN_DATA_PAGE_OVERHEAD))
 
         When("obtaining free space of full data page by means of PageAnalyzer and by means of DataPageIO")
         val expectedFree = dataPageFreeSpaceFromIo(id)
 
-        val buffer = acquireAndReleasePageForAction(id)(pageMemory.pageBuffer)
-        val actualFree = buffer.pageFreeSpace(T_DATA).get - FREE_RESERVED_SIZE
+        val actualFree = dataPageFreeSpaceFromBuffer(id)
 
         Then(s"page free space should be zero")
         assert(actualFree === 0)
@@ -104,11 +98,28 @@ class IgnitePageNoStoreTest extends FlatSpec with BeforeAndAfterEach with GivenW
         When("obtaining free space of this page")
         val expectedFree = dataPageFreeSpaceFromIo(id)
 
-        val buffer = acquireAndReleasePageForAction(id)(pageMemory.pageBuffer)
-        val actualFree = buffer.pageFreeSpace(T_DATA).get - FREE_RESERVED_SIZE
+        val actualFree = dataPageFreeSpaceFromBuffer(id)
 
         Then(s"obtained value by means of PageAnalyzer should be equal to one obtained by means of DataPageIO")
         assert(actualFree === expectedFree)
+    }
+
+    /**
+     * Calculate free space by means of [[IgnitePage()]] taking into account calculation of free space in
+     * [[AbstractDataPageIO]]#getFreeSpace, where value, obtained from page header if decremented to reserved size of
+     * bytes
+     *
+     * @param id [[FullPageId]] of desired page
+     * @return free space in page
+     */
+    private def dataPageFreeSpaceFromBuffer(id: FullPageId) = {
+        val buffer = acquireAndReleasePageForAction(id)(pageMemory.pageBuffer)
+        val actualFree = buffer.pageFreeSpace(T_DATA).get - FREE_RESERVED_SIZE
+
+        if (actualFree < 0)
+            0
+        else
+            actualFree
     }
 
     /**
